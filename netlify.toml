@@ -1,0 +1,26 @@
+# Netlify deployment settings voor Hubo Configurator
+# Vincent, dit bestand zorgt ervoor dat Netlify je site correct bouwt
+
+[build]
+  # Geen build commando nodig - statische HTML
+  publish = "."
+
+[[redirects]]
+  # Redirect naar NL versie als standaard
+  from = "/"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  # Frans naar juiste versie
+  from = "/fr"
+  to = "/index-fr.html"
+  status = 200
+
+[[headers]]
+  # Veiligheidsheaders voor iframe gebruik
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

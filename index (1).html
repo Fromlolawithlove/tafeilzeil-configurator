@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Transparante tafelbeschermer</title>
+  
+  <!-- CryptoJS voor AES encryptie -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  
+  <style>
+    /* Reset + Hubo lettertype */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: 'Roboto Condensed', Arial, sans-serif; 
+      background: #f8fafc; 
+      color: #212529; 
+      padding: 20px; 
+    }
+
+    /* Header wrapper */
+    .header-wrapper {
+      max-width: 1200px;
+      margin: 0 auto 20px;
+      padding: 0 20px;
+    }
+    .header-wrapper h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+      color: #001D85;
+      font-weight: 600;
+    }
+    .header-wrapper p {
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+    .header-wrapper hr {
+      border: none;
+      height: 1px;
+      background: #e2e8f0;
+      margin: 0 0 20px;
+    }
+
+    /* Hoofdcontainer */
+    .main-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    @media (max-width: 768px) {
+      .main-container { flex-direction: column-reverse; }
+    }
+
+    /* Linkerpaneel */
+    .left-panel {
+      flex: 0 0 300px;
+      max-width: 300px;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 5px 25px rgba(0,0,0,0.08);
+      padding: 20px;
+    }
+    .left-panel img { width: 100%; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 15px; }
+    .left-panel h2 { font-size: 20px; margin-bottom: 10px; font-weight: 600; }
+    .left-panel h3 { font-size: 16px; margin-top: 15px; margin-bottom: 8px; color: #001D85; font-weight: 600; }
+    .left-panel p { font-size: 14px; line-height: 1.6; margin-bottom: 10px; }
+    .left-panel ul { list-style: disc; margin-left: 20px; margin-bottom: 10px; }
+    .left-panel table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+    .left-panel td { padding: 6px 0; }
+    .left-panel tr + tr td { border-top: 1px solid #e2e8f0; }
+
+    /* Rechterpaneel */
+    .right-panel {
+      flex: 1;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 5px 25px rgba(0,0,0,0.08);
+      padding: 20px;
+    }
+
+    .preview-container {
+      position: relative;
+      background: #f1f5f9;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      min-height: 220px;
+      margin-bottom: 20px;
+    }
+    #rectangle {
+      background: #001D85;
+      border: 2px solid #001D85;
+      position: absolute;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+      transition: all 0.4s;
+    }
+    .dimension-label {
+      position: absolute;
+      background: #001D85;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .horizontal-label { bottom: -24px; left: 50%; transform: translateX(-50%); }
+    .vertical-label   { left: -50px; top: 50%; transform: translateY(-50%); }
+
+    .section-title { font-size: 16px; font-weight: 700; margin: 15px 0 10px; text-align: center; }
+    .shape-choices { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin-bottom: 15px; }
+    .shape-option { display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+    .shape-option input[type="radio"] { display: none; }
+    .shape-icon {
+      width: 30px; height: 50px;
+      margin-bottom: 6px;
+      border: 2px solid #8ea4c8;
+      background: white;
+      transition: all 0.3s;
+    }
+    .shape-option input:checked + .shape-icon {
+      background: #8ea4c8;
+      border-color: #5a7eb8;
+    }
+    .shape-label { font-size: 14px; color: #212529; text-align: center; }
+    .rectangle-icon { width:30px; height:50px; border-radius:0; }
+    .circle-icon    { width:40px; height:40px; border-radius:50%; }
+    .ellipse-icon   { width:30px; height:50px; border-radius:50%; }
+    .oval-icon      { width:30px; height:50px; border-radius:15px; }
+
+    .slider-group { margin-bottom:15px; }
+    .slider-group label { display:block; margin-bottom:6px; font-weight:600; font-size:15px; color:#334155; }
+    .slider-row { display:flex; align-items:center; gap:10px; }
+    .slider-row input[type=range] {
+      flex:1; height:6px; background:#e2e8f0; border-radius:3px; outline:none;
+      -webkit-appearance:none;
+    }
+    .slider-row input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance:none; width:20px; height:20px; border-radius:50%;
+      background:#001D85; box-shadow:0 0 2px rgba(0,0,0,0.2);
+      cursor:pointer;
+    }
+    .slider-row input[type=number] { 
+      width:70px; border:2px solid #cbd5e1; border-radius:6px; 
+      text-align:center; font-size:14px; padding:4px; 
+    }
+
+    .finishing-group { margin-bottom:20px; }
+    .finishing-group .checkbox-line { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+    #roundedCornersIllustration { display:none; width:80px; margin-top:10px; }
+
+    .qty-btn {
+      width:40px; height:40px;
+      border:2px solid #001D85; background:#001D85;
+      color:white; border-radius:6px;
+      font-size:18px; cursor:pointer;
+      transition:all 0.2s;
+    }
+    .qty-btn:hover { background:#00155F; }
+
+    .order-row {
+      background:#f1f5f9; border-radius:8px; padding:16px;
+      display:flex; flex-direction:column; gap:10px; margin-top:15px;
+    }
+    .price-block { display:flex; flex-direction:column; gap:2px; }
+    .price-label { font-size:14px; font-weight:600; color:#212529; }
+    .price-value { font-size:24px; font-weight:700; color:#212529; }
+    .quantity-control { display:flex; align-items:center; gap:10px; }
+    #quantity { 
+      width:60px; text-align:center; font-size:16px; padding:6px; 
+      border:2px solid #cbd5e1; border-radius:8px; 
+    }
+    
+    /* HUBO GROEN voor primaire bestelknop */
+    .order-btn {
+      padding:12px 20px; background:#669933; color:white; border:none;
+      border-radius:8px; font-size:16px; font-weight:600; cursor:pointer;
+      transition:background 0.3s ease;
+    }
+    .order-btn:hover { background:#557a29; }
+
+    @media (min-width: 992px) {
+      .main-container { flex-wrap:nowrap; }
+      .left-panel { flex:0 0 30%; max-width:30%; }
+      .right-panel { flex:1; }
+    }
+    input[type=number]::-webkit-outer-spin-button,
+    input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+  </style>
+</head>
+<body>
+
+  <div class="header-wrapper">
+    <h1>Configurator: Transparante tafelbeschermer op maat bestellen</h1>
+    <p>Bescherming op maat voor jouw tafel nodig? Dat kan je zeer eenvoudig bestellen via onze configurator. Je stelt de maat en vormen eenvoudig samen en wij maken het nauwkeurig voor je op maat! Zo kan jij eenvoudig jouw transparante tafelbeschermer op maat bestellen.</p>
+    <hr>
+  </div>
+
+  <div class="main-container">
+    <!-- Linkerpaneel -->
+    <div class="left-panel">
+      <img src="PLA2100.jpg" alt="Transparante tafelbeschermer">
+      <h2>Transparante tafelbeschermer</h2>
+      <h3>Product omschrijving</h3>
+      <p>Deze transparante tafelbeschermer is vervaardigd uit hoogwaardig PVC en biedt een optimale bescherming tegen stoten, krassen en vocht. Dankzij de dikte van 2 mm blijft de oorspronkelijke uitstraling van je tafel bewaard, zonder dat je inlevert op gebruiksgemak.</p>
+      <h3>Makkelijk op maat</h3>
+      <p>Via onze configurator bestel je deze tafelbeschermer volledig op maat. Kies je gewenste vorm (rechthoek, cirkel, ellips of ovaal), vul de afmetingen in en pas optioneel 1% extra lengte toe om krimp te compenseren. Zo ben je zeker dat je tafelzeil perfect past.</p>
+      <h3>Tips voor gebruik</h3>
+      <ul>
+        <li><strong>Onderhoud:</strong> Veeg vuil en vloeistoffen eenvoudig weg met een vochtige doek. Gebruik geen agressieve schoonmaakmiddelen.</li>
+        <li><strong>Krimp:</strong> Houd rekening met maximaal 1% krimp in de lengte. Bestel dus gerust iets langer als je een perfecte pasvorm wilt.</li>
+        <li><strong>Niet ideaal voor:</strong> Hoogglans of glazen tafels, omdat er luchtbellen kunnen ontstaan tussen het PVC en het oppervlak.</li>
+        <li><strong>Zelf op maat snijden:</strong> Met een scherp (stanley)mes kun je indien nodig nog kleine stukjes wegsnijden.</li>
+      </ul>
+      <h3>Product eigenschappen</h3>
+      <table>
+        <tr><td><strong>Minimale breedte</strong></td><td>70 cm</td></tr>
+        <tr><td><strong>Maximale breedte</strong></td><td>140 cm</td></tr>
+        <tr><td><strong>Dikte</strong></td><td>2 mm</td></tr>
+        <tr><td><strong>Materiaal</strong></td><td>Transparant PVC</td></tr>
+        <tr><td><strong>Vormkeuze</strong></td><td>Rechthoek, Cirkel, Ellips, Ovaal</td></tr>
+        <tr><td><strong>Afwerking</strong></td><td>Afgeronde hoeken optioneel</td></tr>
+      </table>
+      <h3>Toepassing</h3>
+      <p>De transparante tafelbeschermer is geschikt voor zowel binnen als buiten, zolang de ondergrond vlak en droog is. Ideaal voor keukentafels, eettafels, tuintafels, bureaus en meer.</p>
+      <p>Houd wel rekening met mogelijke luchtbellen op hoogglans of glazen oppervlakken. Voor langdurig plezier raden we aan de tafelbeschermer regelmatig schoon te maken en direct te drogen.</p>
+    </div>
+
+    <!-- Rechterpaneel -->
+    <div class="right-panel">
+      <div class="preview-container">
+        <div id="rectangle">
+          <span class="dimension-label horizontal-label" id="widthLabel">100 cm</span>
+          <span class="dimension-label vertical-label" id="lengthLabel">100 cm</span>
+        </div>
+      </div>
+
+      <div class="section-title">Kies de vorm</div>
+      <div class="shape-choices">
+        <label class="shape-option">
+          <input type="radio" name="shape" value="rectangle" checked>
+          <div class="shape-icon rectangle-icon"></div>
+          <span class="shape-label">Rechthoek<br>+€0,00</span>
+        </label>
+        <label class="shape-option">
+          <input type="radio" name="shape" value="circle">
+          <div class="shape-icon circle-icon"></div>
+          <span class="shape-label">Cirkel<br>+€5,00</span>
+        </label>
+        <label class="shape-option">
+          <input type="radio" name="shape" value="ellipse">
+          <div class="shape-icon ellipse-icon"></div>
+          <span class="shape-label">Ellips<br>+€5,00</span>
+        </label>
+        <label class="shape-option">
+          <input type="radio" name="shape" value="oval">
+          <div class="shape-icon oval-icon"></div>
+          <span class="shape-label">Ovaal<br>+€5,00</span>
+        </label>
+      </div>
+
+      <div class="section-title" id="rectLabel">Kies afmetingen</div>
+      <div id="rectInputs">
+        <div class="slider-group">
+          <label>Breedte (cm)</label>
+          <div class="slider-row">
+            <input type="range" id="widthRange" min="70" max="140" value="100" oninput="syncWidthFromSlider()" onblur="clampWidth()">
+            <input type="number" id="width" min="70" max="140" value="100" oninput="syncWidthFromNumber()" onblur="clampWidth()">
+          </div>
+        </div>
+        <div class="slider-group">
+          <label>Lengte (cm)</label>
+          <div class="slider-row">
+            <input type="range" id="lengthRange" min="70" max="1000" value="100" oninput="syncLengthFromSlider()" onblur="clampLength()">
+            <input type="number" id="length" min="70" max="1000" value="100" oninput="syncLengthFromNumber()" onblur="clampLength()">
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title" id="circleLabel" style="display:none;">Kies diameter</div>
+      <div id="circleInput" style="display:none;">
+        <div class="slider-group">
+          <label>Diameter (cm)</label>
+          <div class="slider-row">
+            <input type="range" id="diameterRange" min="70" max="1000" value="100" oninput="syncDiameterFromSlider()" onblur="clampDiameter()">
+            <input type="number" id="diameter" min="70" max="1000" value="100" oninput="syncDiameterFromNumber()" onblur="clampDiameter()">
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">Afwerking</div>
+      <div class="finishing-group">
+        <div class="checkbox-line">
+          <input type="checkbox" id="extraLength" style="width:18px; height:18px;" oninput="updateAllNoClamp()" onblur="updateAllNoClamp()">
+          <label for="extraLength">Ik wil graag 1% gratis lengte om de mogelijke krimp te compenseren.</label>
+        </div>
+        <div class="checkbox-line" id="roundedCornersLine">
+          <input type="checkbox" id="roundedCorners" style="width:18px; height:18px;" oninput="updateAllNoClamp()" onblur="updateAllNoClamp()">
+          <label for="roundedCorners">Afgeronde hoeken</label>
+        </div>
+        <div id="cornerRadiusRow" style="display:none; margin-top:10px;">
+          <label for="cornerRadius">Ronding (in cm)</label>
+          <div class="slider-row">
+            <input type="range" id="cornerRadiusRange" min="0" max="100" value="0" oninput="syncCornerRadiusFromSlider()" onblur="clampCornerRadius()">
+            <input type="number" id="cornerRadius" min="0" max="100" value="0" oninput="syncCornerRadiusFromNumber()" onblur="clampCornerRadius()">
+          </div>
+          <img id="roundedCornersIllustration" src="rounded-corner-expl.png" alt="Afgeronde hoeken illustratie">
+        </div>
+      </div>
+
+      <div class="order-row">
+        <div class="price-block">
+          <span class="price-label">Totaalprijs</span>
+          <span class="price-value" id="price">€31,95</span>
+        </div>
+        <div class="quantity-control">
+          <button class="qty-btn" onclick="adjustQuantity(-1)">-</button>
+          <input type="number" id="quantity" value="1" min="1" max="99" oninput="updateAllNoClamp()" onblur="clampQuantity()">
+          <button class="qty-btn" onclick="adjustQuantity(1)">+</button>
+        </div>
+        <button class="order-btn" id="orderBtn">Direct bestellen</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ---------- CONFIG ---------- */
+    const CONFIG = {
+      minWidth: 70,
+      minLength: 70,
+      maxWidth: 140,
+      maxLength: 1000,
+      basePricePerM2: 31.95,
+      shapeExtraPrice: { rectangle: 0, circle: 5, ellipse: 5, oval: 5 },
+      priceTiers: { 100: 32.95, 120: 36.95, 140: 39.95 },
+      previewWidth: 250, 
+      previewHeight: 200,
+      // Deze signature key moet je van Hubo krijgen - dit is een placeholder
+      signatureKey: 'TEMP-KEY-VAN-HUBO-VERVANGEN',
+      // Omgevingsdetectie
+      huboEnvironments: {
+        'www.hubo.be': 'https://www.hubo.be/',
+        'www.omni2-prep.hubo.be': 'https://www.omni2-prep.hubo.be/',
+        'www.omni2-acpt.hubo.be': 'https://www.omni2-acpt.hubo.be/',
+        'www.omni2-test.hubo.be': 'https://www.omni2-test.hubo.be/'
+      }
+    };
+
+    /* ---------- ELEMENTEN ---------- */
+    const shapeRadios = document.querySelectorAll('input[name="shape"]');
+    const rectInputs   = document.getElementById('rectInputs');
+    const rectLabel    = document.getElementById('rectLabel');
+    const circleLabel  = document.getElementById('circleLabel');
+    const circleInput  = document.getElementById('circleInput');
+
+    const widthInput   = document.getElementById('width');
+    const widthRange   = document.getElementById('widthRange');
+    const lengthInput  = document.getElementById('length');
+    const lengthRange  = document.getElementById('lengthRange');
+    const diameterInput= document.getElementById('diameter');
+    const diameterRange= document.getElementById('diameterRange');
+
+    const extraLengthCheck        = document.getElementById('extraLength');
+    const roundedCornersLine      = document.getElementById('roundedCornersLine');
+    const roundedCornersCheck     = document.getElementById('roundedCorners');
+    const cornerRadiusRow         = document.getElementById('cornerRadiusRow');
+    const cornerRadiusInput       = document.getElementById('cornerRadius');
+    const cornerRadiusRange       = document.getElementById('cornerRadiusRange');
+    const roundedCornersIllustration = document.getElementById('roundedCornersIllustration');
+
+    const quantityInput = document.getElementById('quantity');
+    const rectangleEl   = document.getElementById('rectangle');
+    const priceEl       = document.getElementById('price');
+    const widthLabelEl  = document.getElementById('widthLabel');
+    const lengthLabelEl = document.getElementById('lengthLabel');
+    const orderBtn      = document.getElementById('orderBtn');
+
+    /* ---------- INIT ---------- */
+    function init() {
+      shapeRadios.forEach(radio => radio.addEventListener('change', updateAllNoClamp));
+      updateAllNoClamp();
+    }
+    window.addEventListener('load', init);
+    orderBtn.addEventListener('click', sendOrder);
+
+    /* ---------- HELPERS ---------- */
+    function getSelectedShape() {
+      let shape = 'rectangle';
+      shapeRadios.forEach(r => { if (r.checked) shape = r.value; });
+      return shape;
+    }
+    function clamp(val, min, max) {
+      return isNaN(val) ? min : Math.max(min, Math.min(max, val));
+    }
+
+    /* ---------- UI LOGIC ---------- */
+    function updateVisibility() {
+      const shape = getSelectedShape();
+      if (shape === 'circle') {
+        rectLabel.style.display = 'none';
+        rectInputs.style.display = 'none';
+        circleLabel.style.display = 'block';
+        circleInput.style.display = 'block';
+      } else {
+        rectLabel.style.display = 'block';
+        rectInputs.style.display = 'block';
+        circleLabel.style.display = 'none';
+        circleInput.style.display = 'none';
+      }
+      if (shape === 'rectangle') {
+        roundedCornersLine.style.display = 'flex';
+        if (roundedCornersCheck.checked) {
+          cornerRadiusRow.style.display = 'block';
+          roundedCornersIllustration.style.display = 'block';
+        } else {
+          cornerRadiusRow.style.display = 'none';
+          roundedCornersIllustration.style.display = 'none';
+        }
+      } else {
+        roundedCornersLine.style.display = 'none';
+        cornerRadiusRow.style.display = 'none';
+        roundedCornersIllustration.style.display = 'none';
+      }
+    }
+
+    /* ---------- SYNC SLIDER/INPUT ---------- */
+    function syncWidthFromSlider() { widthInput.value = widthRange.value; updateAllNoClamp(); }
+    function syncWidthFromNumber() { widthRange.value = widthInput.value; updateAllNoClamp(); }
+    function clampWidth() {
+      let v = clamp(parseFloat(widthInput.value), CONFIG.minWidth, CONFIG.maxWidth);
+      widthInput.value = v; widthRange.value = v; updateAllNoClamp();
+    }
+
+    function syncLengthFromSlider() { lengthInput.value = lengthRange.value; updateAllNoClamp(); }
+    function syncLengthFromNumber() { lengthRange.value = lengthInput.value; updateAllNoClamp(); }
+    function clampLength() {
+      let v = clamp(parseFloat(lengthInput.value), CONFIG.minLength, CONFIG.maxLength);
+      lengthInput.value = v; lengthRange.value = v; updateAllNoClamp();
+    }
+
+    function syncDiameterFromSlider() { diameterInput.value = diameterRange.value; updateAllNoClamp(); }
+    function syncDiameterFromNumber() { diameterRange.value = diameterInput.value; updateAllNoClamp(); }
+    function clampDiameter() {
+      let v = clamp(parseFloat(diameterInput.value), CONFIG.minWidth, CONFIG.maxLength);
+      diameterInput.value = v; diameterRange.value = v; updateAllNoClamp();
+    }
+
+    function syncCornerRadiusFromSlider() { cornerRadiusInput.value = cornerRadiusRange.value; updateAllNoClamp(); }
+    function syncCornerRadiusFromNumber() { cornerRadiusRange.value = cornerRadiusInput.value; updateAllNoClamp(); }
+    function clampCornerRadius() {
+      let v = clamp(parseFloat(cornerRadiusInput.value), 0, 100);
+      cornerRadiusInput.value = v; cornerRadiusRange.value = v; updateAllNoClamp();
+    }
+
+    function adjustQuantity(change) {
+      let v = clamp(parseInt(quantityInput.value) + change, 1, 99);
+      quantityInput.value = v; updateAllNoClamp();
+    }
+    function clampQuantity() {
+      let v = clamp(parseInt(quantityInput.value), 1, 99);
+      quantityInput.value = v; updateAllNoClamp();
+    }
+
+    /* ---------- CALC & PREVIEW ---------- */
+    function updateAllNoClamp() {
+      updateVisibility();
+      calculateDimensions();
+      resizeIframe();
+    }
+    
+    function calculateDimensions() {
+      const shape = getSelectedShape();
+      let wVal = parseFloat(widthInput.value), lVal = parseFloat(lengthInput.value), dVal = parseFloat(diameterInput.value), qty = parseInt(quantityInput.value);
+      const hasExtra = extraLengthCheck.checked;
+      let displayW, displayL;
+      if (shape === 'circle') {
+        displayW = hasExtra ? dVal * 1.01 : dVal;
+        displayL = displayW;
+      } else {
+        displayW = hasExtra ? wVal * 1.01 : wVal;
+        displayL = hasExtra ? lVal * 1.01 : lVal;
+      }
+      const scale = Math.min(CONFIG.previewWidth / displayW, CONFIG.previewHeight / displayL);
+      const finalW = displayW * scale, finalL = displayL * scale;
+      applyShape(shape, finalW, finalL);
+      widthLabelEl.textContent  = `${Math.round(displayW)} cm`;
+      lengthLabelEl.textContent = shape === 'circle' ? `${Math.round(displayW)} cm` : `${Math.round(displayL)} cm`;
+      const totalPrice = calculatePrice(shape, wVal, lVal, dVal, qty);
+      priceEl.textContent = `€${totalPrice.toFixed(2)}`;
+    }
+    
+    function applyShape(shape, w, h) {
+      rectangleEl.style.borderRadius = '0';
+      if (shape === 'rectangle') {
+        rectangleEl.style.width = w + 'px';
+        rectangleEl.style.height = h + 'px';
+        if (roundedCornersCheck.checked) {
+          rectangleEl.style.borderRadius = parseFloat(cornerRadiusInput.value) + 'px';
+        }
+      } else if (shape === 'circle') {
+        rectangleEl.style.width = w + 'px';
+        rectangleEl.style.height = w + 'px';
+        rectangleEl.style.borderRadius = '50%';
+      } else if (shape === 'ellipse') {
+        rectangleEl.style.width = w + 'px';
+        rectangleEl.style.height = h + 'px';
+        rectangleEl.style.borderRadius = '50%';
+      } else if (shape === 'oval') {
+        rectangleEl.style.width = w + 'px';
+        rectangleEl.style.height = h + 'px';
+        rectangleEl.style.borderRadius = Math.min(w/2, h/2) + 'px';
+      }
+    }
+    
+    function calculatePrice(shape, wVal, lVal, dVal, qty) {
+      if (shape === 'circle') {
+        const rM = (dVal/2)/100;
+        const area = Math.PI * rM * rM;
+        const base = area * CONFIG.basePricePerM2;
+        return (base + CONFIG.shapeExtraPrice.circle) * qty;
+      } else {
+        let effectiveW, rate;
+        if (wVal <= 100) { effectiveW = 100; rate = CONFIG.priceTiers[100]; }
+        else if (wVal <= 120) { effectiveW = 120; rate = CONFIG.priceTiers[120]; }
+        else { effectiveW = 140; rate = CONFIG.priceTiers[140]; }
+        const area = (effectiveW/100) * (lVal/100);
+        const surcharge = (shape==='ellipse'||shape==='oval') ? CONFIG.shapeExtraPrice[shape] : 0;
+        return (area * rate + surcharge) * qty;
+      }
+    }
+
+    /* ---------- iFrame-resize ---------- */
+    function resizeIframe() {
+      const newH = document.body.scrollHeight;
+      const targetOrigin = getHuboEnvironment();
+      window.parent.postMessage(JSON.stringify({action:'RESIZE', height:newH}), targetOrigin);
+    }
+
+    /* ---------- HUBO ENVIRONMENT DETECTION ---------- */
+    function getHuboEnvironment() {
+      try {
+        const parentHost = window.parent.location.hostname;
+        return CONFIG.huboEnvironments[parentHost] || 'https://www.hubo.be/';
+      } catch (e) {
+        // Cross-origin, fallback naar productie
+        return 'https://www.hubo.be/';
+      }
+    }
+
+    /* ---------- HUBO BEVEILIGING: AES + HMAC ---------- */
+    function encryptPurchasePrice(price, signatureKey) {
+      // AES-128-ECB met PKCS7 padding
+      const sha1Hash = CryptoJS.SHA1(signatureKey).toString();
+      const aesKey = sha1Hash.substring(0, 16);
+      
+      const formattedPrice = parseFloat(price).toFixed(2);
+      const encrypted = CryptoJS.AES.encrypt(formattedPrice, CryptoJS.enc.Utf8.parse(aesKey), {
+        mode: CryptoJS.mode.ECB,
+        padding: CryptoJS.pad.Pkcs7
+      });
+      
+      return encrypted.ciphertext.toString(CryptoJS.enc.Hex).toUpperCase();
+    }
+
+    function generateHmacSignature(products, signatureKey) {
+      // Signing string volgens Hubo manual §3.3.1
+      let signingString = '';
+      
+      products.forEach(product => {
+        signingString += product.barcode;
+        signingString += product.action;
+        
+        if (product.materials) {
+          product.materials.forEach(material => {
+            signingString += material.code;
+            signingString += material.value;
+          });
+        }
+        
+        signingString += product.imageUrl || '';
+        signingString += product.title;
+        signingString += product.quantity;
+        signingString += product.category;
+        signingString += product.deliveryTime;
+        
+        // Prijzen als %.2f met punt-decimaal (Engels formaat)
+        signingString += parseFloat(product.price).toFixed(2);
+        signingString += product.purchasePrice; // al encrypted
+        signingString += parseFloat(product.unitPrice).toFixed(2);
+      });
+      
+      const hmac = CryptoJS.HmacSHA1(signingString, signatureKey);
+      return hmac.toString(CryptoJS.enc.Hex);
+    }
+
+    function generateBarcode(shape, width, length, diameter, hasExtra, hasRounded) {
+      // Unieke barcode per configuratie
+      const shapeCode = { rectangle: 'R', circle: 'C', ellipse: 'E', oval: 'O' }[shape] || 'R';
+      const extraCode = hasExtra ? '1' : '0';
+      const roundedCode = hasRounded ? '1' : '0';
+      
+      if (shape === 'circle') {
+        return `PLA2100-${shapeCode}${Math.round(diameter)}-${extraCode}${roundedCode}`;
+      } else {
+        return `PLA2100-${shapeCode}${Math.round(width)}x${Math.round(length)}-${extraCode}${roundedCode}`;
+      }
+    }
+
+    /* ---------- ORDERFLOW ---------- */
+    function sendOrder() {
+      const shape = getSelectedShape();
+      const wVal = parseFloat(widthInput.value);
+      const lVal = parseFloat(lengthInput.value);
+      const dVal = parseFloat(diameterInput.value);
+      const qty = parseInt(quantityInput.value);
+      const hasExtra = extraLengthCheck.checked;
+      const hasRounded = roundedCornersCheck.checked && shape === 'rectangle';
+      
+      const finalWidth = shape === 'circle' ? dVal : wVal;
+      const finalLength = shape === 'circle' ? dVal : lVal;
+      const sellPrice = calculatePrice(shape, wVal, lVal, dVal, qty);
+      const unitPrice = calculatePrice(shape, wVal, lVal, dVal, 1);
+      
+      // TODO: Deze purchasePrice moet van je server komen, niet in frontend berekenen
+      // Voor nu gebruik ik 60% van verkoopprijs als voorbeeld
+      const purchasePrice = sellPrice * 0.6;
+      
+      const barcode = generateBarcode(shape, finalWidth, finalLength, dVal, hasExtra, hasRounded);
+      
+      // Encrypt purchase price
+      const encryptedPurchasePrice = encryptPurchasePrice(purchasePrice, CONFIG.signatureKey);
+      
+      const product = {
+        barcode: barcode,
+        action: 'ADD',
+        materials: [
+          { code: 'Vorm', value: shape },
+          { code: 'Breedte', value: `${Math.round(finalWidth)} cm` },
+          { code: 'Lengte', value: `${Math.round(finalLength)} cm` },
+          { code: 'ExtraLengte', value: hasExtra ? 'Ja, 1%' : 'Nee' },
+          { code: 'AfgerondeHoeken', value: hasRounded ? `Ja, ${cornerRadiusInput.value}cm` : 'Nee' }
+        ],
+        imageUrl: 'PLA2100.jpg',
+        title: `Tafelzeil transparant ${shape} ${Math.round(finalWidth)}x${Math.round(finalLength)}cm`.substring(0, 40),
+        quantity: qty,
+        category: 'Tafelbeschermer',
+        deliveryTime: 7,
+        price: sellPrice.toFixed(2),
+        purchasePrice: encryptedPurchasePrice,
+        unitPrice: unitPrice.toFixed(2)
+      };
+
+      const signature = generateHmacSignature([product], CONFIG.signatureKey);
+      
+      const message = {
+        action: 'CHANGE_PRODUCT',
+        products: [product],
+        signature: signature
+      };
+
+      const targetOrigin = getHuboEnvironment();
+      window.parent.postMessage(JSON.stringify(message), targetOrigin);
+      
+      console.log('CHANGE_PRODUCT sent to:', targetOrigin, message);
+    }
+  </script>
+</body>
+</html>
